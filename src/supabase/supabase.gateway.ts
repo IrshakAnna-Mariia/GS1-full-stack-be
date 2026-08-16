@@ -1,7 +1,16 @@
-import type { User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 
 export type SupabaseAuthUserResponse = {
   data: { user: User | null };
+  error: Error | null;
+};
+
+export type SupabaseAuthSessionResponse = {
+  data: { user: User | null; session: Session | null };
+  error: Error | null;
+};
+
+export type SupabaseSignOutResponse = {
   error: Error | null;
 };
 
@@ -16,6 +25,22 @@ export type SupabaseSignedUrlResult = {
 
 export abstract class SupabaseGateway {
   abstract getUserFromToken(token: string): Promise<SupabaseAuthUserResponse>;
+
+  abstract signUp(
+    email: string,
+    password: string,
+  ): Promise<SupabaseAuthSessionResponse>;
+
+  abstract signInWithPassword(
+    email: string,
+    password: string,
+  ): Promise<SupabaseAuthSessionResponse>;
+
+  abstract refreshSession(
+    refreshToken: string,
+  ): Promise<SupabaseAuthSessionResponse>;
+
+  abstract signOut(userId: string): Promise<SupabaseSignOutResponse>;
 
   abstract getUserEmailById(userId: string): Promise<string | null>;
 

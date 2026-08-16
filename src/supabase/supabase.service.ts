@@ -3,7 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, type User } from '@supabase/supabase-js';
 import {
   SupabaseGateway,
+  type SupabaseAuthSessionResponse,
   type SupabaseAuthUserResponse,
+  type SupabaseSignOutResponse,
   type SupabaseSignedUrlResult,
   type SupabaseStorageResult,
 } from './supabase.gateway';
@@ -47,6 +49,57 @@ export class SupabaseService extends SupabaseGateway {
       data: { user: response.data.user },
       error: response.error,
     };
+  }
+
+  override async signUp(
+    email: string,
+    password: string,
+  ): Promise<SupabaseAuthSessionResponse> {
+    const response = await this.authClient.auth.signUp({ email, password });
+    return {
+      data: {
+        user: response.data.user,
+        session: response.data.session,
+      },
+      error: response.error,
+    };
+  }
+
+  override async signInWithPassword(
+    email: string,
+    password: string,
+  ): Promise<SupabaseAuthSessionResponse> {
+    const response = await this.authClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return {
+      data: {
+        user: response.data.user,
+        session: response.data.session,
+      },
+      error: response.error,
+    };
+  }
+
+  override async refreshSession(
+    refreshToken: string,
+  ): Promise<SupabaseAuthSessionResponse> {
+    const response = await this.authClient.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+    return {
+      data: {
+        user: response.data.user,
+        session: response.data.session,
+      },
+      error: response.error,
+    };
+  }
+
+  override async signOut(userId: string): Promise<SupabaseSignOutResponse> {
+    const { error } = await this.adminClient.auth.admin.signOut(userId);
+    return { error };
   }
 
   override async getUserEmailById(userId: string): Promise<string | null> {
