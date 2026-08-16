@@ -1,33 +1,26 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { DatabaseGateway } from '../prisma/database.gateway';
 import { DataRoomDto, toDataRoomDto } from './dto/data-room.dto';
 
 const DEFAULT_DATA_ROOM_NAME = 'My Data Room';
 
 @Injectable()
 export class DataRoomService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: DatabaseGateway) {}
 
   async getOrCreateForUser(ownerId: string): Promise<DataRoomDto> {
-    const dataRoom = await this.prisma.dataRoom.upsert({
-      where: { ownerId },
-      update: {},
-      create: {
-        name: DEFAULT_DATA_ROOM_NAME,
-        ownerId,
-      },
-    });
+    const dataRoom = await this.prisma.upsertDataRoom(
+      ownerId,
+      DEFAULT_DATA_ROOM_NAME,
+    );
 
     return toDataRoomDto(dataRoom);
   }
 
   async assertOwnedByUser(dataRoomId: string, ownerId: string): Promise<void> {
-    const dataRoom = await this.prisma.dataRoom.findUnique({
-      where: { id: dataRoomId },
-      select: { ownerId: true },
-    });
+    const owner = await this.prisma.findDataRoomOwnerId(dataRoomId);
 
-    if (!dataRoom || dataRoom.ownerId !== ownerId) {
+    if (!owner || owner !== ownerId) {
       throw new ForbiddenException('Data room access denied');
     }
   }

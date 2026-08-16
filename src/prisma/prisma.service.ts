@@ -1,53 +1,158 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
-import type { FileEntity } from '../common/entities';
-import type { DatabaseClient } from './database.client';
-
-type FileFindManyWhere = { folderId: string } | { folderId: { in: string[] } };
+import { Inject, Injectable } from '@nestjs/common';
+import type {
+  DataRoomEntity,
+  FileEntity,
+  FolderEntity,
+  FolderWithDataRoomOwner,
+  ShareEntity,
+  ShareResourceType,
+} from '../common/entities';
+import type { CreateShareData, DatabaseClient } from './database.client';
+import {
+  DatabaseGateway,
+  type FileFindManyWhere,
+  type FolderFindManyWhere,
+} from './database.gateway';
 
 @Injectable()
-export class PrismaService implements OnModuleInit, OnModuleDestroy {
-  private readonly client: DatabaseClient;
-
-  constructor() {
-    this.client = new PrismaClient();
+export class PrismaService extends DatabaseGateway {
+  constructor(
+    @Inject('DATABASE_CLIENT')
+    private readonly client: DatabaseClient,
+  ) {
+    super();
   }
 
-  get dataRoom(): DatabaseClient['dataRoom'] {
-    return this.client.dataRoom;
+  override upsertDataRoom(
+    ownerId: string,
+    name: string,
+  ): Promise<DataRoomEntity> {
+    return this.client.dataRoom.upsert({
+      where: { ownerId },
+      update: {},
+      create: { name, ownerId },
+    });
   }
 
-  get folder(): DatabaseClient['folder'] {
-    return this.client.folder;
+  override findDataRoomById(id: string): Promise<DataRoomEntity | null> {
+    return this.client.dataRoom.findById({ where: { id } });
   }
 
-  get share(): DatabaseClient['share'] {
-    return this.client.share;
+  override findDataRoomOwnerId(id: string): Promise<string | null> {
+    return this.client.dataRoom
+      .findOwnerId({ where: { id }, select: { ownerId: true } })
+      .then((dataRoom) => dataRoom?.ownerId ?? null);
   }
 
-  findFiles(args: {
+  override findFolders(args: {
+    where: FolderFindManyWhere;
+    orderBy?: { name: 'asc' };
+  }): Promise<FolderEntity[]> {
+    return this.client.folder.findMany(args);
+  }
+
+  override findFolderById(id: string): Promise<FolderEntity | null> {
+    return this.client.folder.findById({ where: { id } });
+  }
+
+  override findFolderWithOwner(
+    id: string,
+  ): Promise<FolderWithDataRoomOwner | null> {
+    return this.client.folder.findByIdWithOwner({
+      where: { id },
+      include: { dataRoom: { select: { ownerId: true } } },
+    });
+  }
+
+  override createFolder(data: {
+    name: string;
+    dataRoomId: string;
+    parentId?: string | null;
+  }): Promise<FolderEntity> {
+    return this.client.folder.create({ data });
+  }
+
+  override updateFolder(id: string, name: string): Promise<FolderEntity> {
+    return this.client.folder.update({
+      where: { id },
+      data: { name },
+    });
+  }
+
+  override deleteFolder(id: string): Promise<FolderEntity> {
+    return this.client.folder.delete({ where: { id } });
+  }
+
+  override findFiles(args: {
     where: FileFindManyWhere;
     orderBy?: { name: 'asc' };
   }): Promise<FileEntity[]> {
     return this.client.file.findMany(args);
   }
 
-  findFileById(id: string): Promise<FileEntity | null> {
-    return this.client.file.findUnique({ where: { id } });
+  override findFileById(id: string): Promise<FileEntity | null> {
+    return this.client.file.findById({ where: { id } });
   }
 
-  updateFileFolder(id: string, folderId: string): Promise<FileEntity> {
-    return this.client.file.update({
+  override updateFileFolder(id: string, folderId: string): Promise<FileEntity> {
+    return this.client.file.updateFolder({
       where: { id },
       data: { folderId },
     });
   }
 
-  async onModuleInit(): Promise<void> {
-    await (this.client as unknown as PrismaClient).$connect();
+  override findSharesByResource(
+    resourceType: ShareResourceType,
+    resourceId: string,
+  ): Promise<ShareEntity[]> {
+    return this.client.share.findMany({
+      where: { resourceType, resourceId },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
-  async onModuleDestroy(): Promise<void> {
-    await (this.client as unknown as PrismaClient).$disconnect();
+  override findShareByToken(token: string): Promise<ShareEntity | null> {
+    return this.client.share.findByToken({ where: { token } });
+  }
+
+  override findShareById(id: string): Promise<ShareEntity | null> {
+    return this.client.share.findById({ where: { id } });
+  }
+
+  override findPublicShare(
+    resourceType: ShareResourceType,
+    resourceId: string,
+  ): Promise<ShareEntity | null> {
+    return this.client.share.findPublicShare({
+      where: { resourceType, resourceId, type: 'PUBLIC' },
+    });
+  }
+
+  override findUserShare(
+    resourceType: ShareResourceType,
+    resourceId: string,
+    userId: string,
+  ): Promise<ShareEntity | null> {
+    return this.client.share.findUserShare({
+      where: { resourceType, resourceId, type: 'USER', userId },
+    });
+  }
+
+  override findUserShareGrant(
+    resourceType: ShareResourceType,
+    resourceId: string,
+    userId: string,
+  ): Promise<ShareEntity | null> {
+    return this.client.share.findUserShareGrant({
+      where: { resourceType, resourceId, type: 'USER', userId },
+    });
+  }
+
+  override createShare(data: CreateShareData): Promise<ShareEntity> {
+    return this.client.share.create({ data });
+  }
+
+  override deleteShare(id: string): Promise<ShareEntity> {
+    return this.client.share.delete({ where: { id } });
   }
 }

@@ -81,10 +81,23 @@ npm run start:dev
 | PATCH | `/folders/:id` | Rename folder (`{ name }`) |
 | DELETE | `/folders/:id` | Delete folder and all descendants |
 | GET | `/files?folderId=` | Files in a folder |
+| GET | `/files/:id/download` | Signed download URL for a file |
 | PATCH | `/files/:id` | Move file to folder (`{ folderId }`) |
-| GET | `/shares` | Shares for the current user |
+| POST | `/shares` | Create share (`{ resourceType, resourceId, shareType, email? }`) |
+| GET | `/shares?resourceType=&resourceId=` | List shares for a resource (owner only) |
+| DELETE | `/shares/:id` | Revoke a share (owner only) |
+| GET | `/public/shares/:token` | Read-only public access by share token |
+| GET | `/public/shares/:token/folders/:folderId/contents` | Public folder contents within share scope |
 
 All routes require `Authorization: Bearer <supabase-access-token>` unless marked `@Public()`.
+
+## Sharing
+
+- **PUBLIC** — anyone with the link gets read-only access via a secure random token.
+- **USER** — share with an existing Supabase user by email, read-only.
+- Only the resource owner can create or revoke shares.
+- Shares inherit down the tree: a Data Room or Folder share grants read access to all nested content without creating per-item Share records.
+- Viewers can read shared resources but receive `403` on create, update, delete, move, upload, and share operations.
 
 ## Folder delete (MVP)
 

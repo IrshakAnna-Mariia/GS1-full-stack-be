@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { FileEntity } from '../common/entities';
-import { PrismaService } from '../prisma/prisma.service';
+import { DatabaseGateway } from '../prisma/database.gateway';
 
 @Injectable()
 export class FilesRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: DatabaseGateway) {}
 
   findByFolder(folderId: string): Promise<FileEntity[]> {
     return this.prisma.findFiles({

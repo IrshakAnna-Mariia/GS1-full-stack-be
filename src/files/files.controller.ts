@@ -22,6 +22,14 @@ export class FilesController {
     return this.filesService.findByFolder(user.id, query.folderId);
   }
 
+  @Get(':id/download')
+  getDownloadUrl(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.filesService.getDownloadUrl(user.id, id);
+  }
+
   @Patch(':id')
   move(
     @CurrentUser() user: User,

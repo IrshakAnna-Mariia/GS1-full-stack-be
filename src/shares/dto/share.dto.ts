@@ -15,9 +15,14 @@ export type ShareDto = {
   token: string | null;
   createdBy: string;
   createdAt: Date;
+  recipientEmail?: string | null;
+  publicUrl?: string | null;
 };
 
-export function toShareDto(share: ShareEntity): ShareDto {
+export function toShareDto(
+  share: ShareEntity,
+  extras?: { recipientEmail?: string | null; publicUrl?: string | null },
+): ShareDto {
   return {
     id: share.id,
     resourceType: share.resourceType,
@@ -28,5 +33,7 @@ export function toShareDto(share: ShareEntity): ShareDto {
     token: share.token,
     createdBy: share.createdBy,
     createdAt: share.createdAt,
+    recipientEmail: extras?.recipientEmail,
+    publicUrl: extras?.publicUrl,
   };
 }
