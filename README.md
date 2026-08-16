@@ -68,12 +68,14 @@ npm run start:dev
 | `npm run prisma:migrate` | Run migrations |
 | `npm run prisma:studio` | Open Prisma Studio |
 
-## Authentication
+## API Routes
 
-Protected routes expect a Supabase access token:
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/auth/me` | Current authenticated user |
+| GET | `/data-room` | Get or create the user's Data Room |
+| GET | `/folders` | Root folders in the user's Data Room |
+| GET | `/files?folderId=` | Files in a folder |
+| GET | `/shares` | Shares for the current user |
 
-```
-Authorization: Bearer <supabase-access-token>
-```
-
-Use `@Public()` to skip auth. Use `@CurrentUser()` to access the authenticated user.
+All routes require `Authorization: Bearer <supabase-access-token>` unless marked `@Public()`.

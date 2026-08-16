@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+
+type SupabaseClientInstance = ReturnType<typeof createClient>;
 
 @Injectable()
 export class SupabaseService {
-  private readonly client: SupabaseClient;
-  private readonly adminClient: SupabaseClient;
+  private readonly client: SupabaseClientInstance;
+  private readonly adminClient: SupabaseClientInstance;
 
   constructor(private readonly configService: ConfigService) {
     const url = this.configService.getOrThrow<string>('SUPABASE_URL');
@@ -23,11 +25,11 @@ export class SupabaseService {
     });
   }
 
-  getClient(): SupabaseClient {
+  getClient(): SupabaseClientInstance {
     return this.client;
   }
 
-  getAdminClient(): SupabaseClient {
+  getAdminClient(): SupabaseClientInstance {
     return this.adminClient;
   }
 }
