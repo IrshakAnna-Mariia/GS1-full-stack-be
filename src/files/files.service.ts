@@ -14,7 +14,7 @@ export class FilesService {
   ) {}
 
   async findByFolder(userId: string, folderId: string): Promise<FileDto[]> {
-    await this.resourceAccess.getFolderForRead(userId, folderId);
+    await this.resourceAccess.assertFolderAccess(userId, folderId, 'read');
 
     const files = await this.filesRepository.findByFolder(folderId);
 
@@ -25,7 +25,11 @@ export class FilesService {
     userId: string,
     fileId: string,
   ): Promise<{ signedUrl: string | null }> {
-    const file = await this.resourceAccess.getFileForRead(userId, fileId);
+    const file = await this.resourceAccess.assertFileAccess(
+      userId,
+      fileId,
+      'read',
+    );
     const signedUrl = await this.storageService.createSignedUrl(
       file.storageKey,
     );
@@ -37,14 +41,20 @@ export class FilesService {
     fileId: string,
     dto: UpdateFileDto,
   ): Promise<FileDto> {
-    const file = await this.resourceAccess.getFileForWrite(userId, fileId);
-    const sourceFolder = await this.resourceAccess.getFolderForWrite(
+    const file = await this.resourceAccess.assertFileAccess(
+      userId,
+      fileId,
+      'move',
+    );
+    const sourceFolder = await this.resourceAccess.assertFolderAccess(
       userId,
       file.folderId,
+      'move',
     );
-    const targetFolder = await this.resourceAccess.getFolderForWrite(
+    const targetFolder = await this.resourceAccess.assertFolderAccess(
       userId,
       dto.folderId,
+      'move',
     );
 
     if (file.folderId === dto.folderId) {

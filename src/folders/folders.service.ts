@@ -36,9 +36,10 @@ export class FoldersService {
     const dataRoom = await this.dataRoomService.getOrCreateForUser(userId);
 
     if (dto.parentId) {
-      const parent = await this.resourceAccess.getFolderForWrite(
+      const parent = await this.resourceAccess.assertFolderAccess(
         userId,
         dto.parentId,
+        'upload',
       );
 
       if (parent.dataRoomId !== dataRoom.id) {
@@ -58,7 +59,11 @@ export class FoldersService {
   }
 
   async findOne(userId: string, folderId: string): Promise<FolderDto> {
-    const folder = await this.resourceAccess.getFolderForRead(userId, folderId);
+    const folder = await this.resourceAccess.assertFolderAccess(
+      userId,
+      folderId,
+      'read',
+    );
     return toFolderDto(folder);
   }
 
@@ -66,7 +71,11 @@ export class FoldersService {
     userId: string,
     folderId: string,
   ): Promise<FolderContentsDto> {
-    const folder = await this.resourceAccess.getFolderForRead(userId, folderId);
+    const folder = await this.resourceAccess.assertFolderAccess(
+      userId,
+      folderId,
+      'read',
+    );
 
     const [childFolders, files] = await Promise.all([
       this.prisma.findFolders({
@@ -91,7 +100,7 @@ export class FoldersService {
     folderId: string,
     dto: UpdateFolderDto,
   ): Promise<FolderDto> {
-    await this.resourceAccess.getFolderForWrite(userId, folderId);
+    await this.resourceAccess.assertFolderAccess(userId, folderId, 'rename');
 
     const folder = await this.prisma.updateFolder(folderId, dto.name);
 
@@ -99,7 +108,7 @@ export class FoldersService {
   }
 
   async remove(userId: string, folderId: string): Promise<FolderDto> {
-    await this.resourceAccess.getFolderForWrite(userId, folderId);
+    await this.resourceAccess.assertFolderAccess(userId, folderId, 'delete');
     const storageKeys = await this.collectStorageKeysInSubtree(folderId);
 
     await this.storageService.deleteObjects(storageKeys);

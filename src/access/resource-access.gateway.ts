@@ -1,17 +1,16 @@
 import type { FileEntity, FolderWithDataRoomOwner } from '../common/entities';
+import type { ResourceAction } from './resource-access.types';
 
 export abstract class ResourceAccessGateway {
-  abstract getFolderForRead(
+  abstract assertFolderAccess(
     userId: string,
     folderId: string,
+    action: ResourceAction,
   ): Promise<FolderWithDataRoomOwner>;
 
-  abstract getFolderForWrite(
+  abstract assertFileAccess(
     userId: string,
-    folderId: string,
-  ): Promise<FolderWithDataRoomOwner>;
-
-  abstract getFileForRead(userId: string, fileId: string): Promise<FileEntity>;
-
-  abstract getFileForWrite(userId: string, fileId: string): Promise<FileEntity>;
+    fileId: string,
+    action: ResourceAction,
+  ): Promise<FileEntity>;
 }
