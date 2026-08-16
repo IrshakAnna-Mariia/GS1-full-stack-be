@@ -83,22 +83,16 @@ describe('AuthService', () => {
       });
     });
 
-    it('returns user without session when email confirmation is required', async () => {
+    it('throws bad request for invalid email from Supabase', async () => {
       supabase.signUp.mockResolvedValue({
-        data: {
-          user: user({ id: 'user-1', email: 'user@example.com' }),
-          session: null,
-        },
-        error: null,
+        data: { user: null, session: null },
+        error: new Error('Email address "test@gmail.com" is invalid'),
       });
 
       await expect(
-        service.signUp({ email: 'user@example.com', password: 'password1' }),
-      ).resolves.toEqual({
-        user: { id: 'user-1', email: 'user@example.com' },
-        accessToken: null,
-        refreshToken: null,
-        expiresIn: null,
+        service.signUp({ email: 'test@gmail.com', password: 'password1' }),
+      ).rejects.toMatchObject({
+        response: { message: 'Invalid email address' },
       });
     });
 

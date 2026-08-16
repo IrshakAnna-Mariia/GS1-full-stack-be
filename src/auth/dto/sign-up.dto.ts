@@ -1,6 +1,9 @@
+import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
+import { normalizeEmail } from '../../common/utils/normalize-email';
 
 export class SignUpDto {
+  @Transform(({ value }) => normalizeEmail(value))
   @IsEmail()
   email!: string;
 

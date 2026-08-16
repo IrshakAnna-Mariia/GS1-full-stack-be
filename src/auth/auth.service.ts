@@ -11,6 +11,7 @@ import { AuthUserDto, toAuthUserDto } from './dto/auth-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshSessionDto } from './dto/refresh-session.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { normalizeEmail } from '../common/utils/normalize-email';
 
 @Injectable()
 export class AuthService {
@@ -21,8 +22,9 @@ export class AuthService {
   }
 
   async signUp(dto: SignUpDto): Promise<AuthSessionDto> {
+    const email = normalizeEmail(dto.email);
     const { data, error } = await this.supabaseGateway.signUp(
-      dto.email,
+      email,
       dto.password,
     );
 
@@ -38,8 +40,9 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<AuthSessionDto> {
+    const email = normalizeEmail(dto.email);
     const { data, error } = await this.supabaseGateway.signInWithPassword(
-      dto.email,
+      email,
       dto.password,
     );
 
@@ -93,6 +96,14 @@ export class AuthService {
       message.includes('already been registered')
     ) {
       return new ConflictException('Email already registered');
+    }
+
+    if (
+      message.includes('email address') ||
+      message.includes('validate email') ||
+      message.includes('invalid format')
+    ) {
+      return new BadRequestException('Invalid email address');
     }
 
     return new BadRequestException(error.message);

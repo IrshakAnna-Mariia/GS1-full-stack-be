@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, type User } from '@supabase/supabase-js';
+import { normalizeEmail } from '../common/utils/normalize-email';
 import {
   SupabaseGateway,
   type SupabaseAuthSessionResponse,
@@ -55,22 +56,30 @@ export class SupabaseService extends SupabaseGateway {
     email: string,
     password: string,
   ): Promise<SupabaseAuthSessionResponse> {
-    const response = await this.authClient.auth.signUp({ email, password });
-    return {
-      data: {
-        user: response.data.user,
-        session: response.data.session,
-      },
-      error: response.error,
-    };
+    const normalizedEmail = normalizeEmail(email);
+    const createResponse = await this.adminClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password,
+      email_confirm: true,
+    });
+
+    if (createResponse.error) {
+      return {
+        data: { user: null, session: null },
+        error: createResponse.error,
+      };
+    }
+
+    return this.signInWithPassword(normalizedEmail, password);
   }
 
   override async signInWithPassword(
     email: string,
     password: string,
   ): Promise<SupabaseAuthSessionResponse> {
+    const normalizedEmail = normalizeEmail(email);
     const response = await this.authClient.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
     return {
