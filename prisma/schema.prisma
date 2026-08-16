@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ShareResourceType {
+  DATA_ROOM
+  FOLDER
+  FILE
+}
+
+enum SharePermission {
+  VIEWER
+}
+
+enum ShareType {
+  PUBLIC
+  USER
+}
+
+model DataRoom {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  ownerId   String   @map("owner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  folders Folder[]
+
+  @@map("data_rooms")
+}
+
+model Folder {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  dataRoomId String   @map("data_room_id") @db.Uuid
+  parentId   String?  @map("parent_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  dataRoom DataRoom @relation(fields: [dataRoomId], references: [id], onDelete: Cascade)
+  parent   Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children Folder[] @relation("FolderTree")
+  files    File[]
+
+  @@index([parentId])
+  @@index([dataRoomId])
+  @@map("folders")
+}
+
+model File {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  storageKey String   @map("storage_key")
+  mimeType   String   @map("mime_type")
+  size       Int
+  folderId   String   @map("folder_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@map("files")
+}
+
+model Share {
+  id           String            @id @default(uuid()) @db.Uuid
+  resourceType ShareResourceType @map("resource_type")
+  resourceId   String            @map("resource_id") @db.Uuid
+  permission   SharePermission   @default(VIEWER)
+  type         ShareType
+  userId       String?           @map("user_id") @db.Uuid
+  token        String?           @unique
+  createdBy    String            @map("created_by") @db.Uuid
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  @@index([resourceType, resourceId])
+  @@index([userId])
+  @@index([token])
+  @@map("shares")
+}
