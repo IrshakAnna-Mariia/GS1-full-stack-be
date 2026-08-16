@@ -5,6 +5,8 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ResourceAccessGateway } from '../access/resource-access.gateway';
+import { DataRoomService } from '../data-room/data-room.service';
+import { DatabaseGateway } from '../prisma/database.gateway';
 import { StorageGateway } from '../storage/storage.gateway';
 import type { CreateFileDto } from './dto/create-file.dto';
 import type { CreateFileResponseDto } from './dto/create-file-response.dto';
@@ -20,6 +22,8 @@ export class FilesService {
     private readonly filesRepository: FilesRepository,
     private readonly resourceAccess: ResourceAccessGateway,
     private readonly storageService: StorageGateway,
+    private readonly dataRoomService: DataRoomService,
+    private readonly prisma: DatabaseGateway,
   ) {}
 
   async findByFolder(userId: string, folderId: string): Promise<FileDto[]> {
@@ -34,15 +38,13 @@ export class FilesService {
     userId: string,
     dto: RequestUploadUrlDto,
   ): Promise<UploadUrlResponseDto> {
-    await this.resourceAccess.assertFolderAccess(
-      userId,
-      dto.folderId,
-      'upload',
-    );
+    const folderId = await this.resolveFolderId(userId, dto);
+
+    await this.resourceAccess.assertFolderAccess(userId, folderId, 'upload');
 
     const storageKey = this.filesRepository.buildStorageKey(
       userId,
-      dto.folderId,
+      folderId,
       dto.fileName,
     );
 
@@ -59,19 +61,17 @@ export class FilesService {
     userId: string,
     dto: CreateFileDto,
   ): Promise<CreateFileResponseDto> {
-    await this.resourceAccess.assertFolderAccess(
-      userId,
-      dto.folderId,
-      'upload',
-    );
+    const folderId = await this.resolveFolderId(userId, dto);
+
+    await this.resourceAccess.assertFolderAccess(userId, folderId, 'upload');
 
     const storageKey =
       dto.storageKey ??
-      this.filesRepository.buildStorageKey(userId, dto.folderId, dto.name);
+      this.filesRepository.buildStorageKey(userId, folderId, dto.name);
 
     if (
       dto.storageKey &&
-      !this.isStorageKeyForFolder(userId, dto.folderId, dto.storageKey)
+      !this.isStorageKeyForFolder(userId, folderId, dto.storageKey)
     ) {
       throw new ForbiddenException('Invalid storage key for this folder');
     }
@@ -81,7 +81,7 @@ export class FilesService {
       storageKey,
       mimeType: dto.contentType ?? this.inferMimeType(dto.name),
       size: 0,
-      folderId: dto.folderId,
+      folderId,
     });
 
     const response = toFileDto(file);
@@ -186,6 +186,43 @@ export class FilesService {
     const deleted = await this.filesRepository.delete(fileId);
 
     return toFileDto(deleted);
+  }
+
+  private async resolveFolderId(
+    userId: string,
+    dto: { folderId?: string; folderName?: string },
+  ): Promise<string> {
+    if (dto.folderId) {
+      return dto.folderId;
+    }
+
+    const folderName = dto.folderName?.trim();
+    if (!folderName) {
+      throw new BadRequestException(
+        'Provide folderId or folderName. Create a folder with POST /folders or send folderName to auto-create a root folder.',
+      );
+    }
+
+    const dataRoom = await this.dataRoomService.getOrCreateForUser(userId);
+    const folders = await this.prisma.findFolders({
+      where: { dataRoomId: dataRoom.id, parentId: null },
+      orderBy: { name: 'asc' },
+    });
+
+    const existing = folders.find(
+      (folder) => folder.name.toLowerCase() === folderName.toLowerCase(),
+    );
+    if (existing) {
+      return existing.id;
+    }
+
+    const folder = await this.prisma.createFolder({
+      name: folderName,
+      dataRoomId: dataRoom.id,
+      parentId: null,
+    });
+
+    return folder.id;
   }
 
   private isStorageKeyForFolder(
