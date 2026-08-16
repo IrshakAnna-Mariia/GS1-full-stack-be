@@ -1,15 +1,16 @@
+import { ValidationPipe } from '@nestjs/common';
 import { describe, expect, it } from '@jest/globals';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { CreateFileDto } from './create-file.dto';
-import { FOLDER_TARGET_HELP } from '../utils/folder-target';
 import { RequestUploadUrlDto } from './request-upload-url.dto';
 
 const folderId = '550e8400-e29b-41d4-a716-446655440000';
-
-function messages(errors: ReturnType<typeof validateSync>): string[] {
-  return errors.flatMap((error) => Object.values(error.constraints ?? {}));
-}
+const validationPipe = new ValidationPipe({
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
+});
 
 describe('folder target validation', () => {
   it('accepts a valid folderId on upload-url', () => {
@@ -42,13 +43,26 @@ describe('folder target validation', () => {
     expect(validateSync(dto)).toEqual([]);
   });
 
-  it('returns a single folder target error when neither target is provided', () => {
+  it('accepts requests without any folder target', () => {
     const dto = plainToInstance(RequestUploadUrlDto, {
       fileName: 'report.pdf',
       contentType: 'application/pdf',
     });
 
-    expect(messages(validateSync(dto))).toEqual([FOLDER_TARGET_HELP]);
+    expect(validateSync(dto)).toEqual([]);
+  });
+
+  it('accepts folderName-only payloads through Nest ValidationPipe', async () => {
+    const result = (await validationPipe.transform(
+      {
+        fileName: 'report.pdf',
+        folderName: 'Documents',
+        contentType: 'application/pdf',
+      },
+      { type: 'body', metatype: RequestUploadUrlDto },
+    )) as RequestUploadUrlDto;
+
+    expect(result.folderName).toBe('Documents');
   });
 
   it('treats empty folderId as missing instead of invalid UUID', () => {
@@ -58,7 +72,7 @@ describe('folder target validation', () => {
       storageKey: 'user/folder/report.pdf',
     });
 
-    expect(messages(validateSync(dto))).toEqual([FOLDER_TARGET_HELP]);
+    expect(validateSync(dto)).toEqual([]);
   });
 
   it('remaps a non-uuid folderId value to folderName', () => {

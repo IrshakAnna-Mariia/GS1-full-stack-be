@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { ResourceAccessGateway } from '../access/resource-access.gateway';
 import { DataRoomService } from '../data-room/data-room.service';
+import {
+  DEFAULT_ROOT_FOLDER_NAME,
+  getOrCreateRootFolderByName,
+} from '../folders/utils/root-folder';
 import { DatabaseGateway } from '../prisma/database.gateway';
 import { StorageGateway } from '../storage/storage.gateway';
 import type { CreateFileDto } from './dto/create-file.dto';
@@ -200,32 +204,14 @@ export class FilesService {
       return folderId;
     }
 
-    if (!folderName) {
-      throw new BadRequestException(
-        'Provide folderId or folderName. Create a folder with POST /folders or send folderName to auto-create a root folder.',
-      );
-    }
-
     const dataRoom = await this.dataRoomService.getOrCreateForUser(userId);
-    const folders = await this.prisma.findFolders({
-      where: { dataRoomId: dataRoom.id, parentId: null },
-      orderBy: { name: 'asc' },
-    });
+    const targetFolderName = folderName ?? DEFAULT_ROOT_FOLDER_NAME;
 
-    const existing = folders.find(
-      (folder) => folder.name.toLowerCase() === folderName.toLowerCase(),
+    return getOrCreateRootFolderByName(
+      this.prisma,
+      dataRoom.id,
+      targetFolderName,
     );
-    if (existing) {
-      return existing.id;
-    }
-
-    const folder = await this.prisma.createFolder({
-      name: folderName,
-      dataRoomId: dataRoom.id,
-      parentId: null,
-    });
-
-    return folder.id;
   }
 
   private isStorageKeyForFolder(

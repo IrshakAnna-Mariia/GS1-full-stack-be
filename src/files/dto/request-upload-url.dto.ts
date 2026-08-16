@@ -1,15 +1,12 @@
 import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
-  Validate,
   ValidateIf,
 } from 'class-validator';
-import {
-  HasFolderTargetConstraint,
-  trimOptionalStringTransform,
-} from './has-folder-target.constraint';
+import { trimOptionalStringTransform } from '../../common/utils/trim-optional-string';
 import {
   FOLDER_TARGET_HELP,
   shouldValidateFolderId,
@@ -18,7 +15,6 @@ import {
 export class RequestUploadUrlDto {
   @IsString()
   @IsNotEmpty()
-  @Validate(HasFolderTargetConstraint)
   fileName!: string;
 
   @Transform(trimOptionalStringTransform)
@@ -27,6 +23,9 @@ export class RequestUploadUrlDto {
   folderId?: string;
 
   @Transform(trimOptionalStringTransform)
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   folderName?: string;
 
   @IsString()

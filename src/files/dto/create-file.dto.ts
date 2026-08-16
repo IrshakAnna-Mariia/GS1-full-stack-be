@@ -5,13 +5,9 @@ import {
   IsOptional,
   IsString,
   IsUUID,
-  Validate,
   ValidateIf,
 } from 'class-validator';
-import {
-  HasFolderTargetConstraint,
-  trimOptionalStringTransform,
-} from './has-folder-target.constraint';
+import { trimOptionalStringTransform } from '../../common/utils/trim-optional-string';
 import {
   FOLDER_TARGET_HELP,
   shouldValidateFolderId,
@@ -26,7 +22,6 @@ export class CreateFileDto {
   )
   @IsString()
   @IsNotEmpty()
-  @Validate(HasFolderTargetConstraint)
   name!: string;
 
   @Transform(trimOptionalStringTransform)
@@ -35,6 +30,9 @@ export class CreateFileDto {
   folderId?: string;
 
   @Transform(trimOptionalStringTransform)
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   folderName?: string;
 
   @IsOptional()

@@ -1,7 +1,7 @@
 import { isUUID } from 'class-validator';
 
 export const FOLDER_TARGET_HELP =
-  'Provide folderId (UUID from GET /folders) or folderName (creates a root folder if needed).';
+  'folderId is optional. Omit it to use folderName, or leave both out to create/use the default root folder.';
 
 export type FolderTargetInput = {
   folderId?: unknown;
@@ -33,11 +33,6 @@ export function normalizeFolderTarget(
   }
 
   return { folderId, folderName };
-}
-
-export function hasValidFolderTarget(target: FolderTargetInput): boolean {
-  const { folderId, folderName } = normalizeFolderTarget(target);
-  return Boolean((folderId && isUUID(folderId)) || folderName);
 }
 
 export function shouldValidateFolderId(target: FolderTargetInput): boolean {
