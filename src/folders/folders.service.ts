@@ -1,10 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import type { FolderWithDataRoomOwner } from '../common/entities';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { ResourceAccessService } from '../access/resource-access.service';
 import { toFileDto } from '../files/dto/file.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -20,6 +15,7 @@ export class FoldersService {
     private readonly prisma: PrismaService,
     private readonly dataRoomService: DataRoomService,
     private readonly storageService: StorageService,
+    private readonly resourceAccess: ResourceAccessService,
   ) {}
 
   async findRootFolders(userId: string): Promise<FolderDto[]> {
@@ -40,7 +36,10 @@ export class FoldersService {
     const dataRoom = await this.dataRoomService.getOrCreateForUser(userId);
 
     if (dto.parentId) {
-      const parent = await this.getFolderForUser(userId, dto.parentId);
+      const parent = await this.resourceAccess.getFolderForUser(
+        userId,
+        dto.parentId,
+      );
 
       if (parent.dataRoomId !== dataRoom.id) {
         throw new BadRequestException(
@@ -61,7 +60,7 @@ export class FoldersService {
   }
 
   async findOne(userId: string, folderId: string): Promise<FolderDto> {
-    const folder = await this.getFolderForUser(userId, folderId);
+    const folder = await this.resourceAccess.getFolderForUser(userId, folderId);
     return toFolderDto(folder);
   }
 
@@ -69,14 +68,14 @@ export class FoldersService {
     userId: string,
     folderId: string,
   ): Promise<FolderContentsDto> {
-    const folder = await this.getFolderForUser(userId, folderId);
+    const folder = await this.resourceAccess.getFolderForUser(userId, folderId);
 
     const [childFolders, files] = await Promise.all([
       this.prisma.folder.findMany({
         where: { parentId: folderId },
         orderBy: { name: 'asc' },
       }),
-      this.prisma.file.findMany({
+      this.prisma.findFiles({
         where: { folderId },
         orderBy: { name: 'asc' },
       }),
@@ -94,7 +93,7 @@ export class FoldersService {
     folderId: string,
     dto: UpdateFolderDto,
   ): Promise<FolderDto> {
-    await this.getFolderForUser(userId, folderId);
+    await this.resourceAccess.getFolderForUser(userId, folderId);
 
     const folder = await this.prisma.folder.update({
       where: { id: folderId },
@@ -105,7 +104,7 @@ export class FoldersService {
   }
 
   async remove(userId: string, folderId: string): Promise<FolderDto> {
-    await this.getFolderForUser(userId, folderId);
+    await this.resourceAccess.getFolderForUser(userId, folderId);
     const storageKeys = await this.collectStorageKeysInSubtree(folderId);
 
     await this.storageService.deleteObjects(storageKeys);
@@ -117,32 +116,12 @@ export class FoldersService {
     return toFolderDto(deleted);
   }
 
-  private async getFolderForUser(
-    userId: string,
-    folderId: string,
-  ): Promise<FolderWithDataRoomOwner> {
-    const folder = await this.prisma.folder.findUnique({
-      where: { id: folderId },
-      include: { dataRoom: { select: { ownerId: true } } },
-    });
-
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
-
-    if (folder.dataRoom.ownerId !== userId) {
-      throw new ForbiddenException('Folder access denied');
-    }
-
-    return folder;
-  }
-
   private async collectStorageKeysInSubtree(
     rootFolderId: string,
   ): Promise<string[]> {
     const folderIds = await this.collectFolderIds(rootFolderId);
 
-    const files = await this.prisma.file.findMany({
+    const files = await this.prisma.findFiles({
       where: { folderId: { in: folderIds } },
     });
 

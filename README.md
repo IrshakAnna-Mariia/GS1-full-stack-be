@@ -81,6 +81,7 @@ npm run start:dev
 | PATCH | `/folders/:id` | Rename folder (`{ name }`) |
 | DELETE | `/folders/:id` | Delete folder and all descendants |
 | GET | `/files?folderId=` | Files in a folder |
+| PATCH | `/files/:id` | Move file to folder (`{ folderId }`) |
 | GET | `/shares` | Shares for the current user |
 
 All routes require `Authorization: Bearer <supabase-access-token>` unless marked `@Public()`.

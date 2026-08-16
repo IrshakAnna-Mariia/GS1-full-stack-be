@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AccessModule } from './access/access.module';
 import { AuthModule } from './auth/auth.module';
 import { validateEnv } from './config/env.validation';
 import { DataRoomModule } from './data-room/data-room.module';
@@ -17,6 +18,7 @@ import { SupabaseModule } from './supabase/supabase.module';
     }),
     PrismaModule,
     SupabaseModule,
+    AccessModule,
     AuthModule,
     DataRoomModule,
     FoldersModule,

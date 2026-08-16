@@ -52,6 +52,11 @@ export interface DatabaseClient {
       where: FileFindManyWhere;
       orderBy?: { name: 'asc' };
     }): Promise<FileEntity[]>;
+    findUnique(args: { where: { id: string } }): Promise<FileEntity | null>;
+    update(args: {
+      where: { id: string };
+      data: { folderId: string };
+    }): Promise<FileEntity>;
   };
   share: {
     findMany(args: {

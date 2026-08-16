@@ -1,34 +1,54 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { ResourceAccessService } from '../access/resource-access.service';
 import { FileDto, toFileDto } from './dto/file.dto';
+import type { UpdateFileDto } from './dto/update-file.dto';
+import { FilesRepository } from './files.repository';
 
 @Injectable()
 export class FilesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly filesRepository: FilesRepository,
+    private readonly resourceAccess: ResourceAccessService,
+  ) {}
 
   async findByFolder(userId: string, folderId: string): Promise<FileDto[]> {
-    const folder = await this.prisma.folder.findUnique({
-      where: { id: folderId },
-      include: { dataRoom: { select: { ownerId: true } } },
-    });
+    await this.resourceAccess.getFolderForUser(userId, folderId);
 
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
-
-    if (folder.dataRoom.ownerId !== userId) {
-      throw new ForbiddenException('Folder access denied');
-    }
-
-    const files = await this.prisma.file.findMany({
-      where: { folderId },
-      orderBy: { name: 'asc' },
-    });
+    const files = await this.filesRepository.findByFolder(folderId);
 
     return files.map((file) => toFileDto(file));
+  }
+
+  async move(
+    userId: string,
+    fileId: string,
+    dto: UpdateFileDto,
+  ): Promise<FileDto> {
+    const file = await this.resourceAccess.getFileForUser(userId, fileId);
+    const sourceFolder = await this.resourceAccess.getFolderForUser(
+      userId,
+      file.folderId,
+    );
+    const targetFolder = await this.resourceAccess.getFolderForUser(
+      userId,
+      dto.folderId,
+    );
+
+    if (file.folderId === dto.folderId) {
+      throw new BadRequestException('File is already in this folder');
+    }
+
+    if (sourceFolder.dataRoomId !== targetFolder.dataRoomId) {
+      throw new BadRequestException(
+        'Target folder must belong to the same data room',
+      );
+    }
+
+    const updated = await this.filesRepository.updateFolderId(
+      fileId,
+      dto.folderId,
+    );
+
+    return toFileDto(updated);
   }
 }
