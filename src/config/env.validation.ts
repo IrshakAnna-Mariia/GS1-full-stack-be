@@ -25,23 +25,27 @@ class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
-  SUPABASE_URL: string;
+  declare SUPABASE_URL: string;
 
   @IsString()
   @IsNotEmpty()
-  SUPABASE_ANON_KEY: string;
+  declare SUPABASE_ANON_KEY: string;
 
   @IsString()
   @IsNotEmpty()
-  SUPABASE_SERVICE_ROLE_KEY: string;
+  declare SUPABASE_SERVICE_ROLE_KEY: string;
 
   @IsString()
   @IsNotEmpty()
-  DATABASE_URL: string;
+  declare DATABASE_URL: string;
 
   @IsString()
   @IsNotEmpty()
-  DIRECT_URL: string;
+  declare DIRECT_URL: string;
+
+  @IsString()
+  @IsOptional()
+  SUPABASE_STORAGE_BUCKET: string = 'uploads';
 }
 
 export function validateEnv(config: Record<string, unknown>) {

@@ -2,6 +2,8 @@
 
 NestJS backend with Prisma ORM and Supabase (PostgreSQL, Auth, Storage).
 
+The React frontend lives in the sibling repo [`GS1-full-stack`](../GS1-full-stack). See its README for **full-stack startup** (run this backend first, then the frontend).
+
 ## Stack
 
 - **NestJS** — API framework
@@ -68,12 +70,46 @@ npm run start:dev
 | `npm run prisma:migrate` | Run migrations |
 | `npm run prisma:studio` | Open Prisma Studio |
 
-## Authentication
+## API Routes
 
-Protected routes expect a Supabase access token:
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/auth/me` | Current authenticated user |
+| GET | `/data-room` | Get or create the user's Data Room |
+| GET | `/folders` | Root folders in the user's Data Room |
+| POST | `/folders` | Create folder (`{ name, parentId? }`) |
+| GET | `/folders/:id` | Get folder by id |
+| GET | `/folders/:id/contents` | Folder with child folders and files |
+| PATCH | `/folders/:id` | Rename folder (`{ name }`) |
+| DELETE | `/folders/:id` | Delete folder and all descendants |
+| GET | `/files?folderId=` | Files in a folder |
+| POST | `/files/upload-url` | Presigned upload URL (`{ fileName, folderId, contentType }`) |
+| POST | `/files` | Create file record after upload (`{ name, folderId, storageKey }`) |
+| GET | `/files/:id/download` | Signed download URL for a file |
+| PATCH | `/files/:id` | Rename (`{ name }`) or move (`{ folderId }`) file |
+| DELETE | `/files/:id` | Delete file |
+| POST | `/shares` | Create share (`{ resourceType, resourceId, shareType, email? }`) |
+| GET | `/shares?resourceType=&resourceId=` | List shares for a resource (owner only) |
+| DELETE | `/shares/:id` | Revoke a share (owner only) |
+| GET | `/public/shares/:token` | Read-only public access by share token |
+| GET | `/public/shares/:token/folders/:folderId/contents` | Public folder contents within share scope |
+
+All routes require `Authorization: Bearer <supabase-access-token>` unless marked `@Public()`.
+
+## Sharing
+
+- **PUBLIC** — anyone with the link gets read-only access via a secure random token.
+- **USER** — share with an existing Supabase user by email, read-only.
+- Only the resource owner can create or revoke shares.
+- Shares inherit down the tree: a Data Room or Folder share grants read access to all nested content without creating per-item Share records.
+- Viewers can read shared resources but receive `403` on create, update, delete, move, upload, and share operations.
+
+## Folder delete (MVP)
+
+Deleting a folder uses PostgreSQL cascade for nested folders and file records:
 
 ```
-Authorization: Bearer <supabase-access-token>
+DataRoom → Folder → Folder → File
 ```
 
-Use `@Public()` to skip auth. Use `@CurrentUser()` to access the authenticated user.
+Before the DB delete, the API attempts to remove related objects from Supabase Storage using each file's `storageKey`. Storage cleanup is **best-effort**: if storage deletion fails, the error is logged and the DB delete still proceeds. Orphaned storage objects may remain and can be cleaned up manually or by a future background job.

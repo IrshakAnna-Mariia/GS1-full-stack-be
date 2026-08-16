@@ -31,6 +31,7 @@ model DataRoom {
 
   folders Folder[]
 
+  @@unique([ownerId])
   @@map("data_rooms")
 }
 
