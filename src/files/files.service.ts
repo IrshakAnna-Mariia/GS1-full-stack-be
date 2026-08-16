@@ -7,6 +7,7 @@ import {
 import { ResourceAccessGateway } from '../access/resource-access.gateway';
 import { StorageGateway } from '../storage/storage.gateway';
 import type { CreateFileDto } from './dto/create-file.dto';
+import type { CreateFileResponseDto } from './dto/create-file-response.dto';
 import { FileDto, toFileDto } from './dto/file.dto';
 import type { RequestUploadUrlDto } from './dto/request-upload-url.dto';
 import type { UpdateFileDto } from './dto/update-file.dto';
@@ -54,26 +55,48 @@ export class FilesService {
     return { uploadUrl, storageKey };
   }
 
-  async create(userId: string, dto: CreateFileDto): Promise<FileDto> {
+  async create(
+    userId: string,
+    dto: CreateFileDto,
+  ): Promise<CreateFileResponseDto> {
     await this.resourceAccess.assertFolderAccess(
       userId,
       dto.folderId,
       'upload',
     );
 
-    if (!this.isStorageKeyForFolder(userId, dto.folderId, dto.storageKey)) {
+    const storageKey =
+      dto.storageKey ??
+      this.filesRepository.buildStorageKey(userId, dto.folderId, dto.name);
+
+    if (
+      dto.storageKey &&
+      !this.isStorageKeyForFolder(userId, dto.folderId, dto.storageKey)
+    ) {
       throw new ForbiddenException('Invalid storage key for this folder');
     }
 
     const file = await this.filesRepository.create({
       name: dto.name,
-      storageKey: dto.storageKey,
-      mimeType: this.inferMimeType(dto.name),
+      storageKey,
+      mimeType: dto.contentType ?? this.inferMimeType(dto.name),
       size: 0,
       folderId: dto.folderId,
     });
 
-    return toFileDto(file);
+    const response = toFileDto(file);
+
+    if (dto.storageKey) {
+      return response;
+    }
+
+    const uploadUrl =
+      await this.storageService.createUploadSignedUrl(storageKey);
+    if (!uploadUrl) {
+      throw new InternalServerErrorException('Failed to create upload URL');
+    }
+
+    return { ...response, uploadUrl };
   }
 
   async getDownloadUrl(
