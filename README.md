@@ -75,7 +75,22 @@ npm run start:dev
 | GET | `/auth/me` | Current authenticated user |
 | GET | `/data-room` | Get or create the user's Data Room |
 | GET | `/folders` | Root folders in the user's Data Room |
+| POST | `/folders` | Create folder (`{ name, parentId? }`) |
+| GET | `/folders/:id` | Get folder by id |
+| GET | `/folders/:id/contents` | Folder with child folders and files |
+| PATCH | `/folders/:id` | Rename folder (`{ name }`) |
+| DELETE | `/folders/:id` | Delete folder and all descendants |
 | GET | `/files?folderId=` | Files in a folder |
 | GET | `/shares` | Shares for the current user |
 
 All routes require `Authorization: Bearer <supabase-access-token>` unless marked `@Public()`.
+
+## Folder delete (MVP)
+
+Deleting a folder uses PostgreSQL cascade for nested folders and file records:
+
+```
+DataRoom → Folder → Folder → File
+```
+
+Before the DB delete, the API attempts to remove related objects from Supabase Storage using each file's `storageKey`. Storage cleanup is **best-effort**: if storage deletion fails, the error is logged and the DB delete still proceeds. Orphaned storage objects may remain and can be cleaned up manually or by a future background job.

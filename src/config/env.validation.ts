@@ -42,6 +42,10 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   declare DIRECT_URL: string;
+
+  @IsString()
+  @IsOptional()
+  SUPABASE_STORAGE_BUCKET: string = 'uploads';
 }
 
 export function validateEnv(config: Record<string, unknown>) {

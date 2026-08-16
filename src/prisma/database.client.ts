@@ -6,6 +6,13 @@ import type {
   ShareEntity,
 } from '../common/entities';
 
+type FolderFindManyWhere =
+  | { dataRoomId: string; parentId: null }
+  | { parentId: string }
+  | { parentId: string | null; dataRoomId: string };
+
+type FileFindManyWhere = { folderId: string } | { folderId: { in: string[] } };
+
 export interface DatabaseClient {
   dataRoom: {
     upsert(args: {
@@ -20,18 +27,30 @@ export interface DatabaseClient {
   };
   folder: {
     findMany(args: {
-      where: { dataRoomId: string; parentId: null };
-      orderBy: { name: 'asc' };
+      where: FolderFindManyWhere;
+      orderBy?: { name: 'asc' };
     }): Promise<FolderEntity[]>;
     findUnique(args: {
       where: { id: string };
       include: { dataRoom: { select: { ownerId: true } } };
     }): Promise<FolderWithDataRoomOwner | null>;
+    create(args: {
+      data: {
+        name: string;
+        dataRoomId: string;
+        parentId?: string | null;
+      };
+    }): Promise<FolderEntity>;
+    update(args: {
+      where: { id: string };
+      data: { name: string };
+    }): Promise<FolderEntity>;
+    delete(args: { where: { id: string } }): Promise<FolderEntity>;
   };
   file: {
     findMany(args: {
-      where: { folderId: string };
-      orderBy: { name: 'asc' };
+      where: FileFindManyWhere;
+      orderBy?: { name: 'asc' };
     }): Promise<FileEntity[]>;
   };
   share: {
