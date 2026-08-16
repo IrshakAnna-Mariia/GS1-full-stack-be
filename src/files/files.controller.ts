@@ -1,15 +1,19 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
 } from '@nestjs/common';
 import type { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CreateFileDto } from './dto/create-file.dto';
 import { ListFilesQueryDto } from './dto/list-files-query.dto';
+import { RequestUploadUrlDto } from './dto/request-upload-url.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
 import { FilesService } from './files.service';
 
@@ -22,6 +26,19 @@ export class FilesController {
     return this.filesService.findByFolder(user.id, query.folderId);
   }
 
+  @Post('upload-url')
+  requestUploadUrl(
+    @CurrentUser() user: User,
+    @Body() dto: RequestUploadUrlDto,
+  ) {
+    return this.filesService.requestUploadUrl(user.id, dto);
+  }
+
+  @Post()
+  create(@CurrentUser() user: User, @Body() dto: CreateFileDto) {
+    return this.filesService.create(user.id, dto);
+  }
+
   @Get(':id/download')
   getDownloadUrl(
     @CurrentUser() user: User,
@@ -31,11 +48,16 @@ export class FilesController {
   }
 
   @Patch(':id')
-  move(
+  update(
     @CurrentUser() user: User,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateFileDto,
   ) {
-    return this.filesService.move(user.id, id, dto);
+    return this.filesService.update(user.id, id, dto);
+  }
+
+  @Delete(':id')
+  remove(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
+    return this.filesService.remove(user.id, id);
   }
 }

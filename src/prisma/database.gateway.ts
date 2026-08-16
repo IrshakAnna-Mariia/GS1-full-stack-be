@@ -59,6 +59,18 @@ export abstract class DatabaseGateway {
 
   abstract updateFileFolder(id: string, folderId: string): Promise<FileEntity>;
 
+  abstract updateFileName(id: string, name: string): Promise<FileEntity>;
+
+  abstract createFile(data: {
+    name: string;
+    storageKey: string;
+    mimeType: string;
+    size: number;
+    folderId: string;
+  }): Promise<FileEntity>;
+
+  abstract deleteFile(id: string): Promise<FileEntity>;
+
   abstract findSharesByResource(
     resourceType: ShareResourceType,
     resourceId: string,

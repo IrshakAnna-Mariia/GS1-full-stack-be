@@ -29,7 +29,10 @@ export function createDatabaseClient(): DatabaseConnection {
     file: {
       findMany: (args) => prisma.file.findMany(args),
       findById: (args) => prisma.file.findUnique(args),
+      create: (args) => prisma.file.create(args),
       updateFolder: (args) => prisma.file.update(args),
+      updateName: (args) => prisma.file.update(args),
+      delete: (args) => prisma.file.delete(args),
     },
     share: {
       findMany: (args) => prisma.share.findMany(args),

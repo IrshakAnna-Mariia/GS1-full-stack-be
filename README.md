@@ -81,8 +81,11 @@ npm run start:dev
 | PATCH | `/folders/:id` | Rename folder (`{ name }`) |
 | DELETE | `/folders/:id` | Delete folder and all descendants |
 | GET | `/files?folderId=` | Files in a folder |
+| POST | `/files/upload-url` | Presigned upload URL (`{ fileName, folderId, contentType }`) |
+| POST | `/files` | Create file record after upload (`{ name, folderId, storageKey }`) |
 | GET | `/files/:id/download` | Signed download URL for a file |
-| PATCH | `/files/:id` | Move file to folder (`{ folderId }`) |
+| PATCH | `/files/:id` | Rename (`{ name }`) or move (`{ folderId }`) file |
+| DELETE | `/files/:id` | Delete file |
 | POST | `/shares` | Create share (`{ resourceType, resourceId, shareType, email? }`) |
 | GET | `/shares?resourceType=&resourceId=` | List shares for a resource (owner only) |
 | DELETE | `/shares/:id` | Revoke a share (owner only) |

@@ -101,6 +101,27 @@ export class PrismaService extends DatabaseGateway {
     });
   }
 
+  override updateFileName(id: string, name: string): Promise<FileEntity> {
+    return this.client.file.updateName({
+      where: { id },
+      data: { name },
+    });
+  }
+
+  override createFile(data: {
+    name: string;
+    storageKey: string;
+    mimeType: string;
+    size: number;
+    folderId: string;
+  }): Promise<FileEntity> {
+    return this.client.file.create({ data });
+  }
+
+  override deleteFile(id: string): Promise<FileEntity> {
+    return this.client.file.delete({ where: { id } });
+  }
+
   override findSharesByResource(
     resourceType: ShareResourceType,
     resourceId: string,

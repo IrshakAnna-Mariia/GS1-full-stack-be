@@ -23,6 +23,11 @@ export type SupabaseSignedUrlResult = {
   error: Error | null;
 };
 
+export type SupabaseUploadUrlResult = {
+  signedUrl: string | null;
+  error: Error | null;
+};
+
 export abstract class SupabaseGateway {
   abstract getUserFromToken(token: string): Promise<SupabaseAuthUserResponse>;
 
@@ -56,4 +61,9 @@ export abstract class SupabaseGateway {
     storageKey: string,
     expiresIn: number,
   ): Promise<SupabaseSignedUrlResult>;
+
+  abstract createStorageUploadSignedUrl(
+    bucket: string,
+    storageKey: string,
+  ): Promise<SupabaseUploadUrlResult>;
 }

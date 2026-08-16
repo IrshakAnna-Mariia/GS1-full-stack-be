@@ -54,6 +54,26 @@ export class StorageService extends StorageGateway {
     return signedUrl;
   }
 
+  override async createUploadSignedUrl(
+    storageKey: string,
+  ): Promise<string | null> {
+    const bucket = this.getBucket();
+    const { signedUrl, error } =
+      await this.supabaseService.createStorageUploadSignedUrl(
+        bucket,
+        storageKey,
+      );
+
+    if (error) {
+      this.logger.warn(
+        `Failed to create upload URL for ${storageKey}: ${error.message}`,
+      );
+      return null;
+    }
+
+    return signedUrl;
+  }
+
   private getBucket(): string {
     return this.configService.get<string>('SUPABASE_STORAGE_BUCKET', 'uploads');
   }

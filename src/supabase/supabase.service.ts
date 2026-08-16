@@ -9,6 +9,7 @@ import {
   type SupabaseSignOutResponse,
   type SupabaseSignedUrlResult,
   type SupabaseStorageResult,
+  type SupabaseUploadUrlResult,
 } from './supabase.gateway';
 
 type SupabaseListUsersResponse = {
@@ -166,6 +167,20 @@ export class SupabaseService extends SupabaseGateway {
     const { data, error } = await this.adminClient.storage
       .from(bucket)
       .createSignedUrl(storageKey, expiresIn);
+
+    return {
+      signedUrl: data?.signedUrl ?? null,
+      error,
+    };
+  }
+
+  override async createStorageUploadSignedUrl(
+    bucket: string,
+    storageKey: string,
+  ): Promise<SupabaseUploadUrlResult> {
+    const { data, error } = await this.adminClient.storage
+      .from(bucket)
+      .createSignedUploadUrl(storageKey);
 
     return {
       signedUrl: data?.signedUrl ?? null,

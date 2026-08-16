@@ -73,10 +73,24 @@ export interface DatabaseClient {
       orderBy?: { name: 'asc' };
     }): Promise<FileEntity[]>;
     findById(args: { where: { id: string } }): Promise<FileEntity | null>;
+    create(args: {
+      data: {
+        name: string;
+        storageKey: string;
+        mimeType: string;
+        size: number;
+        folderId: string;
+      };
+    }): Promise<FileEntity>;
     updateFolder(args: {
       where: { id: string };
       data: { folderId: string };
     }): Promise<FileEntity>;
+    updateName(args: {
+      where: { id: string };
+      data: { name: string };
+    }): Promise<FileEntity>;
+    delete(args: { where: { id: string } }): Promise<FileEntity>;
   };
   share: {
     findMany(args: {

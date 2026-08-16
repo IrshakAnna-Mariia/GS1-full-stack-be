@@ -4,5 +4,7 @@ export abstract class StorageGateway {
     expiresIn?: number,
   ): Promise<string | null>;
 
+  abstract createUploadSignedUrl(storageKey: string): Promise<string | null>;
+
   abstract deleteObjects(storageKeys: string[]): Promise<void>;
 }

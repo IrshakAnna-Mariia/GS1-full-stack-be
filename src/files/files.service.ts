@@ -1,8 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ResourceAccessGateway } from '../access/resource-access.gateway';
 import { StorageGateway } from '../storage/storage.gateway';
+import type { CreateFileDto } from './dto/create-file.dto';
 import { FileDto, toFileDto } from './dto/file.dto';
+import type { RequestUploadUrlDto } from './dto/request-upload-url.dto';
 import type { UpdateFileDto } from './dto/update-file.dto';
+import type { UploadUrlResponseDto } from './dto/upload-url-response.dto';
 import { FilesRepository } from './files.repository';
 
 @Injectable()
@@ -21,6 +29,53 @@ export class FilesService {
     return files.map((file) => toFileDto(file));
   }
 
+  async requestUploadUrl(
+    userId: string,
+    dto: RequestUploadUrlDto,
+  ): Promise<UploadUrlResponseDto> {
+    await this.resourceAccess.assertFolderAccess(
+      userId,
+      dto.folderId,
+      'upload',
+    );
+
+    const storageKey = this.filesRepository.buildStorageKey(
+      userId,
+      dto.folderId,
+      dto.fileName,
+    );
+
+    const uploadUrl =
+      await this.storageService.createUploadSignedUrl(storageKey);
+    if (!uploadUrl) {
+      throw new InternalServerErrorException('Failed to create upload URL');
+    }
+
+    return { uploadUrl, storageKey };
+  }
+
+  async create(userId: string, dto: CreateFileDto): Promise<FileDto> {
+    await this.resourceAccess.assertFolderAccess(
+      userId,
+      dto.folderId,
+      'upload',
+    );
+
+    if (!this.isStorageKeyForFolder(userId, dto.folderId, dto.storageKey)) {
+      throw new ForbiddenException('Invalid storage key for this folder');
+    }
+
+    const file = await this.filesRepository.create({
+      name: dto.name,
+      storageKey: dto.storageKey,
+      mimeType: this.inferMimeType(dto.name),
+      size: 0,
+      folderId: dto.folderId,
+    });
+
+    return toFileDto(file);
+  }
+
   async getDownloadUrl(
     userId: string,
     fileId: string,
@@ -36,10 +91,32 @@ export class FilesService {
     return { signedUrl };
   }
 
-  async move(
+  async update(
     userId: string,
     fileId: string,
     dto: UpdateFileDto,
+  ): Promise<FileDto> {
+    if (!dto.name && !dto.folderId) {
+      throw new BadRequestException('Provide name or folderId to update');
+    }
+
+    if (dto.name && dto.folderId) {
+      throw new BadRequestException('Provide only one of name or folderId');
+    }
+
+    if (dto.name) {
+      await this.resourceAccess.assertFileAccess(userId, fileId, 'rename');
+      const updated = await this.filesRepository.updateName(fileId, dto.name);
+      return toFileDto(updated);
+    }
+
+    return this.move(userId, fileId, { folderId: dto.folderId! });
+  }
+
+  async move(
+    userId: string,
+    fileId: string,
+    dto: Pick<UpdateFileDto, 'folderId'>,
   ): Promise<FileDto> {
     const file = await this.resourceAccess.assertFileAccess(
       userId,
@@ -53,7 +130,7 @@ export class FilesService {
     );
     const targetFolder = await this.resourceAccess.assertFolderAccess(
       userId,
-      dto.folderId,
+      dto.folderId!,
       'move',
     );
 
@@ -69,9 +146,36 @@ export class FilesService {
 
     const updated = await this.filesRepository.updateFolderId(
       fileId,
-      dto.folderId,
+      dto.folderId!,
     );
 
     return toFileDto(updated);
+  }
+
+  async remove(userId: string, fileId: string): Promise<FileDto> {
+    const file = await this.resourceAccess.assertFileAccess(
+      userId,
+      fileId,
+      'delete',
+    );
+
+    await this.storageService.deleteObjects([file.storageKey]);
+    const deleted = await this.filesRepository.delete(fileId);
+
+    return toFileDto(deleted);
+  }
+
+  private isStorageKeyForFolder(
+    userId: string,
+    folderId: string,
+    storageKey: string,
+  ): boolean {
+    return storageKey.startsWith(`${userId}/${folderId}/`);
+  }
+
+  private inferMimeType(fileName: string): string {
+    return fileName.toLowerCase().endsWith('.pdf')
+      ? 'application/pdf'
+      : 'application/octet-stream';
   }
 }

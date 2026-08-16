@@ -1,6 +1,12 @@
-import { IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class UpdateFileDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  name?: string;
+
+  @IsOptional()
   @IsUUID()
-  declare folderId: string;
+  folderId?: string;
 }
