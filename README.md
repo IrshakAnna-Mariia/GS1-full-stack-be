@@ -2,6 +2,8 @@
 
 NestJS backend with Prisma ORM and Supabase (PostgreSQL, Auth, Storage).
 
+The React frontend lives in the sibling repo [`GS1-full-stack`](../GS1-full-stack). See its README for **full-stack startup** (run this backend first, then the frontend).
+
 ## Stack
 
 - **NestJS** — API framework
