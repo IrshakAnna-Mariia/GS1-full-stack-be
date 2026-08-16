@@ -1,20 +1,32 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, IsUUID, ValidateIf } from 'class-validator';
-import { FOLDER_TARGET_HELP, remapFolderIdTransform } from './folder-target';
+import {
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  Validate,
+  ValidateIf,
+} from 'class-validator';
+import {
+  HasFolderTargetConstraint,
+  trimOptionalStringTransform,
+} from './has-folder-target.constraint';
+import {
+  FOLDER_TARGET_HELP,
+  shouldValidateFolderId,
+} from '../utils/folder-target';
 
 export class RequestUploadUrlDto {
   @IsString()
   @IsNotEmpty()
+  @Validate(HasFolderTargetConstraint)
   fileName!: string;
 
-  @Transform(remapFolderIdTransform)
-  @ValidateIf((dto: RequestUploadUrlDto) => !dto.folderName)
+  @Transform(trimOptionalStringTransform)
+  @ValidateIf(shouldValidateFolderId)
   @IsUUID(undefined, { message: FOLDER_TARGET_HELP })
   folderId?: string;
 
-  @ValidateIf((dto: RequestUploadUrlDto) => !dto.folderId)
-  @IsString()
-  @IsNotEmpty()
+  @Transform(trimOptionalStringTransform)
   folderName?: string;
 
   @IsString()

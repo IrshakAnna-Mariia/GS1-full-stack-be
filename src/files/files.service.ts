@@ -14,6 +14,8 @@ import { FileDto, toFileDto } from './dto/file.dto';
 import type { RequestUploadUrlDto } from './dto/request-upload-url.dto';
 import type { UpdateFileDto } from './dto/update-file.dto';
 import type { UploadUrlResponseDto } from './dto/upload-url-response.dto';
+import type { FolderTargetInput } from './utils/folder-target';
+import { normalizeFolderTarget } from './utils/folder-target';
 import { FilesRepository } from './files.repository';
 
 @Injectable()
@@ -190,13 +192,14 @@ export class FilesService {
 
   private async resolveFolderId(
     userId: string,
-    dto: { folderId?: string; folderName?: string },
+    dto: FolderTargetInput,
   ): Promise<string> {
-    if (dto.folderId) {
-      return dto.folderId;
+    const { folderId, folderName } = normalizeFolderTarget(dto);
+
+    if (folderId) {
+      return folderId;
     }
 
-    const folderName = dto.folderName?.trim();
     if (!folderName) {
       throw new BadRequestException(
         'Provide folderId or folderName. Create a folder with POST /folders or send folderName to auto-create a root folder.',

@@ -5,9 +5,17 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Validate,
   ValidateIf,
 } from 'class-validator';
-import { FOLDER_TARGET_HELP, remapFolderIdTransform } from './folder-target';
+import {
+  HasFolderTargetConstraint,
+  trimOptionalStringTransform,
+} from './has-folder-target.constraint';
+import {
+  FOLDER_TARGET_HELP,
+  shouldValidateFolderId,
+} from '../utils/folder-target';
 
 export class CreateFileDto {
   @Allow()
@@ -18,16 +26,15 @@ export class CreateFileDto {
   )
   @IsString()
   @IsNotEmpty()
+  @Validate(HasFolderTargetConstraint)
   name!: string;
 
-  @Transform(remapFolderIdTransform)
-  @ValidateIf((dto: CreateFileDto) => !dto.folderName)
+  @Transform(trimOptionalStringTransform)
+  @ValidateIf(shouldValidateFolderId)
   @IsUUID(undefined, { message: FOLDER_TARGET_HELP })
   folderId?: string;
 
-  @ValidateIf((dto: CreateFileDto) => !dto.folderId)
-  @IsString()
-  @IsNotEmpty()
+  @Transform(trimOptionalStringTransform)
   folderName?: string;
 
   @IsOptional()
